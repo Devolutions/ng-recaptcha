@@ -1,0 +1,63 @@
+name: push package
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish: # for dry-run if set to false
+        default: true
+        description: Publish packages to Artifactory
+        required: true
+        type: boolean
+
+jobs:
+  push:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+
+      - name: Setup .npmrc
+        uses: devolutions/actions/npmrc-setup@v1
+        with:
+          npm_token: ${{ secrets.ARTIFACTORY_NPM_TOKEN }}
+          repository: npm-local
+
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Build
+        if: ${{ !inputs.publish }}
+        run: yarn run lib:build
+
+      - name: Setup .npmrc local
+        if: ${{ inputs.publish }}
+        uses: devolutions/actions/npmrc-setup@v1
+        with:
+          npm_token: ${{ secrets.ARTIFACTORY_NPM_TOKEN }}
+          repository: npm-local
+
+      - name: Push
+        if: ${{ inputs.publish }}
+        run: yarn run publish:jfrog
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package
+          path: dist/*
