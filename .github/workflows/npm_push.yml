@@ -14,6 +14,14 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
+      - name: Check out devolutions/actions
+        uses: actions/checkout@v4
+        with:
+          path: ./.github/workflows
+          ref: v1
+          repository: Devolutions/actions
+          token: ${{ secrets.DEVOLUTIONSBOT_TOKEN }}
+
       - name: Check out repository
         uses: actions/checkout@v4
 
@@ -23,7 +31,7 @@ jobs:
           node-version: 20.x
 
       - name: Setup .npmrc
-        uses: devolutions/actions/npmrc-setup@v1
+        uses: ./.github/workflows/npmrc-setup
         with:
           npm_token: ${{ secrets.ARTIFACTORY_NPM_TOKEN }}
           repository: npm-local
@@ -48,7 +56,7 @@ jobs:
 
       - name: Setup .npmrc local
         if: ${{ inputs.publish }}
-        uses: devolutions/actions/npmrc-setup@v1
+        uses: ./.github/workflows/npmrc-setup
         with:
           npm_token: ${{ secrets.ARTIFACTORY_NPM_TOKEN }}
           repository: npm-local
